@@ -108,8 +108,9 @@ class Trainer():
 
             data_pack = deque([])
             cpuct:float = self.config["cpuct"]
+            T = tqdm(range(self.config["selfplay_each_iter"]), desc="Self Play")
             if not self.config["multiprocessing"]:
-                T = tqdm(range(self.config["selfplay_each_iter"]), desc="Self Play")
+                
                 for _ in T:
                     game_data = self.collect_single_game()
                     data_pack += game_data
@@ -117,7 +118,7 @@ class Trainer():
                     T.set_description_str(f"Self Play win={r}, len={len(game_data)}")
             else:
                 self.next_net.nnet.share_memory()
-                mp.set_start_method("spawn")
+                mp.set_start_method("spawn", force=True)
                 num_sims:int = self.config["num_sims"]
                 cpuct:float = self.config["cpuct"]
                 with mp.Pool(processes=10) as pool:
@@ -148,8 +149,8 @@ class Trainer():
             
             
             # import ipdb; ipdb.set_trace()
-            next_mcts = MCTS(self.game, self.next_net, self.config["num_sims"], self.config.cpuct)
-            last_mcts = MCTS(self.game, self.last_net, self.config["num_sims"], self.config.cpuct)
+            next_mcts = MCTS(self.game, self.next_net, self.config["num_sims"], self.config["cpupt"])
+            last_mcts = MCTS(self.game, self.last_net, self.config["num_sims"], self.config["cpupt"])
 
             log.info('Pitting against last version...')
             ######################################

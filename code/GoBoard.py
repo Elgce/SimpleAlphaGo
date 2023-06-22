@@ -1,5 +1,5 @@
 import numpy as np
-
+from collections import deque
 
 class Stone:
     EMPTY = 0
@@ -185,27 +185,31 @@ class Board:
         black_group = set()
         white_group = set()
         empty_group = set()
-        def dfs(i, j):
-            assert self.is_valid_position(i, j)
-            if visited[i, j] == 1:
-                return
-            visited[i, j] = 1
-            empty_group.add((i, j))
-            for dx, dy in self.moves:
-                nx, ny = i + dx, j + dy
-                if self.is_valid_position(nx, ny):
-                    if self.data[nx, ny] == Stone.BLACK:
-                        black_group.add((nx, ny))
-                    elif self.data[nx, ny] == Stone.WHITE:
-                        white_group.add((nx, ny))
-                    else:
-                        dfs(nx, ny)
+        # visited = set()
+        def bfs(x, y):
+            queue = deque([(x, y)])
+            visited[x, y] = 1
+
+            while queue:
+                x, y = queue.popleft()
+                empty_group.add((x, y))
+
+                for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                    nx, ny = x + dx, y + dy
+                    if self.is_valid_position(nx, ny) and visited[nx, ny] == 0:
+                        if self.data[nx, ny] == Stone.BLACK:
+                            black_group.add((nx, ny))
+                        elif self.data[nx, ny] == Stone.WHITE:
+                            white_group.add((nx, ny))
+                        else:
+                            queue.append((nx, ny))
+                            visited[nx, ny] = 1
             
         visited = np.zeros(shape=(self.n, self.n))
         for i in range(self.n):
             for j in range(self.n):
                 if self.data[i, j] == Stone.EMPTY and visited[i, j] == 0:
-                    dfs(i, j)
+                    bfs(i, j)
                     blacks, whites, emptys= len(black_group), len(white_group), len(empty_group)
                     white_score += emptys if blacks == 0 else 0
                     black_score += emptys if whites == 0 else 0
