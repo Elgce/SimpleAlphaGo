@@ -22,11 +22,11 @@ args: Dict[str, Any]={
     'update_match_cnt': 30,                        # 计算更新模型胜率阈值的对弈次数
     'eval_match_cnt': 10,                          # 每次更新模型后，进行评估的对弈次数
     'num_sims': 50,                                # MCTS搜索的模拟次数
-    'cpuct': 1,                                    # MCTS探索系数
+    'cpuct': 3.0,                                    # MCTS探索系数
     'cuda': True,                                  # 启用CUDA
-    'checkpoint_folder': './temp_3/',                # 模型保存路径
-    'load_model': False,                           # 是否加载模型
-    'load_folder_file': ('temp_3','best.pth.tar'),   # 加载模型的路径
+    'checkpoint_folder': './tmp/',                # 模型保存路径
+    'load_model': True,                           # 是否加载模型
+    'load_folder_file': ('tmp','best.pth.tar'),   # 加载模型的路径
     'pit_with': RandomPlayer(Game(BOARD_SIZE), 1), # 评估时的对手
     'multiprocessing': True,
 }
@@ -41,8 +41,8 @@ def main():
     nnet = nn(g)
 
     if args['load_model']:
-        log.info('Loading checkpoint "%s/%s"...', args.load_folder_file[0], args.load_folder_file[1])
-        nnet.load_checkpoint(args.load_folder_file[0], args.load_folder_file[1])
+        log.info('Loading checkpoint "%s/%s"...', args["load_folder_file"][0], args["load_folder_file"][1])
+        nnet.load_checkpoint(args["load_folder_file"][0], args["load_folder_file"][1])
     else:
         log.warning('Not loading a checkpoint!')
 

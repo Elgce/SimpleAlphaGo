@@ -67,7 +67,7 @@ class GoNNet(nn.Module):
         # fc4输出的是目前board对应的value值
         pi = self.fc3(s)
         v = self.fc4(s)
-        return F.log_softmax(pi, dim=1), torch.tanh(v)
+        return F.softmax(pi, dim=1), torch.tanh(v)
     
 
 class GoNNetWrapper():
@@ -109,8 +109,8 @@ class GoNNetWrapper():
                 # Compute loss and backprop
                 # loss = (z-v)**2 - (pi^T)logP + c||theta||**2
                 out_pi, out_v = self.nnet(boards)
-                pi_loss = -torch.sum(target_pis * out_pi) / target_pis.size()[0]
-                v_loss = torch.sum((target_vs - out_v.view(-1)) ** 2) / target_vs.size()[0]
+                pi_loss = -torch.sum(target_pis * torch.log(out_pi)) / target_pis.size()[0]
+                v_loss = torch.sum((target_vs - out_v.reshape(-1)) ** 2) / target_vs.size()[0]
                 loss = pi_loss + v_loss
                 tlosses.append(loss.item())
                 # import ipdb; ipdb.set_trace()

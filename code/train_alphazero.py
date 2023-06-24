@@ -102,6 +102,10 @@ class Trainer():
         iters = []
         f_iter = []
         update = []
+        dlast_wins = []
+        dlast_draws = []
+        dnext_draws = []
+        dnext_wins = []
         for i in range(1, self.config["max_training_iter"] + 1):
 
             log.info(f'Starting Iter #{i} ...')
@@ -121,7 +125,7 @@ class Trainer():
                 mp.set_start_method("spawn", force=True)
                 num_sims:int = self.config["num_sims"]
                 cpuct:float = self.config["cpuct"]
-                with mp.Pool(processes=10) as pool:
+                with mp.Pool(processes=6) as pool:
                     for game_data in pool.starmap(func=static_collect_single_game, 
                                                   iterable=[
                         (self.game.n, self.next_net, num_sims, cpuct,)
@@ -149,8 +153,8 @@ class Trainer():
             
             
             # import ipdb; ipdb.set_trace()
-            next_mcts = MCTS(self.game, self.next_net, self.config["num_sims"], self.config["cpupt"])
-            last_mcts = MCTS(self.game, self.last_net, self.config["num_sims"], self.config["cpupt"])
+            next_mcts = MCTS(self.game, self.next_net, self.config["num_sims"], self.config["cpuct"])
+            last_mcts = MCTS(self.game, self.last_net, self.config["num_sims"], self.config["cpuct"])
 
             log.info('Pitting against last version...')
             ######################################
@@ -160,10 +164,17 @@ class Trainer():
             next_mcts_player, last_mcts_player = FastEvalPlayer(next_mcts), FastEvalPlayer(last_mcts)
             random_player = RandomPlayer(self.game, 1)
             multi_match = (mul_test_multi_match if self.config["multiprocessing"] else test_multi_match)
-            next_wins, next_loses, next_draws = multi_match(next_mcts_player, random_player, self.game)
-            last_wins, last_loses, last_draws = multi_match(last_mcts_player, random_player, self.game)
+            next_wins, next_loses, next_draws = multi_match(next_mcts_player, last_mcts_player, self.game, 40)
+            dnext_draws.append((next_draws+next_wins)/100.0)
+            dnext_wins.append((next_wins)/100.0)
+            random_wins, _, _ = multi_match(next_mcts_player, random_player, self.game)
+            print("pk random by next, win: ", random_wins)
+            # last_wins, last_loses, last_draws = multi_match(last_mcts_player, random_player, self.game)
+            # dlast_draws.append((last_draws+last_wins)/100.0)
+            # dlast_wins.append(last_wins/100.0)
+            
             f_iter.append(i)
-            if next_wins - last_wins <= 1:
+            if next_wins + next_loses == 0 or float(next_wins)/(next_wins+next_loses) < 0.55:
                 log.info("reject new model")
                 update.append(0)
                 self.next_net.load_checkpoint(folder=self.config["checkpoint_folder"], filename='temp.pth.tar')
@@ -172,17 +183,31 @@ class Trainer():
                 log.info("accept new model")
                 self.next_net.save_checkpoint(folder=self.config["checkpoint_folder"], filename='checkpoint_'+str(i)+'.pth.tar')
                 self.next_net.save_checkpoint(folder=self.config["checkpoint_folder"], filename='best.pth.tar')
-            plt.figure(figsize=(15, 6))
-            plt.subplot(1, 2, 1)
+            plt.figure(figsize=(25, 12))
+            plt.subplot(1, 3, 1)
             plt.title("loss")
             plt.plot(iters, losses)
             plt.xlabel('iter (10 step per iter)')
             plt.ylabel('loss')
-            plt.subplot(1, 2, 2)
+            plt.subplot(1, 3, 2)
             plt.title("update rate")
             plt.plot(f_iter, update)
             plt.xlabel('iter')
             plt.ylabel('update')
+            plt.subplot(1, 3, 3)
+            # plt.title("last_nnet_rate")
+            # plt.plot(f_iter, dlast_wins)
+            # plt.plot(f_iter, dlast_draws)
+            # plt.legend(['win rate', 'no lose rate'], loc='upper left')
+            # plt.xlabel("iter")
+            # plt.ylabel("rate")
+            # plt.subplot(1, 4, 4)
+            plt.title("next_nnet_rate")
+            plt.plot(f_iter, dnext_wins)
+            plt.plot(f_iter, dnext_draws)
+            plt.legend(['win rate', 'no lose rate'], loc='upper left')
+            plt.xlabel("iter")
+            plt.ylabel("rate")
             plt.suptitle("Training curve", fontsize=16)
-            plt.savefig('result_2.png')
+            plt.savefig('result.png')
             plt.close()
